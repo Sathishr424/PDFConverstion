@@ -1,0 +1,21 @@
+{
+  "name": "pdftohtmlform",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "npx kill-port 4000 && npx nodemon server.js",
+    "kill": "npx kill-port 4000"
+  },
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "express": "^4.14.0",
+    "html-pdf-node": "^1.0.8",
+    "multer": "^1.4.4",
+    "pdf-text-extract": "^1.5.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
