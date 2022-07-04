@@ -2,7 +2,7 @@
   "name": "pdftohtmlform",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npx kill-port 4000 && npx nodemon server.js",
@@ -13,7 +13,7 @@
     "express": "^4.14.0",
     "html-pdf-node": "^1.0.8",
     "multer": "^1.4.4",
-    "pdf-text-extract": "^1.5.0"
+    "pdf2json": "^2.0.1"
   },
   "keywords": [],
   "author": "",

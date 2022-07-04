@@ -1,13 +1,12 @@
 const express     = require('express');
 const bodyParser  = require('body-parser');
 const path = require('path')
-
 const fs = require('fs');
 const multer  = require('multer');
 const html_to_pdf = require('html-pdf-node');
 
-const extract = require('pdf-text-extract');
 const upload = multer({dest: 'download/'});
+const PDFParser = require("pdf2json");
 
 const app = express();
 
@@ -38,6 +37,7 @@ async function getHtml(data){
     return html_start + mid_html + html_end;
 }
 
+let pdfParser = new PDFParser(this,1);
 app.post('/convert', upload.single('pdf'), async (req,res)=>{
 
     fs.readdir(path.join(__dirname, 'download'), async (err, files) => {
@@ -64,80 +64,79 @@ app.post('/convert', upload.single('pdf'), async (req,res)=>{
         var start_index = -1;
         var end_index = -1;
         var raw_data = []
-        extract(path.join(__dirname, file.path), async function (err, pages) {
-            if (err) {
-            console.dir(err)
-            resolve(err)
-            }
-            var str = ""
-            var data = []
-            for (var p of pages){
-                if (p !== '\n'){
-                    data = p.split('\n')
-                    // console.log(data)
-                    space_count = 0
-                    is_space = false
-                    for (var i=0; i<data.length; i++){
-                        d = data[i]
-                        s = d.replace(/\s{2,}/g, ' ').trim().replace('GLUCOSE', 'BLOOD SUGAR')
-                        data[i] = s
-                        raw_data.push(s)
-                        str += s + "\n"
-                        if (s.search('Sample Dt') != -1){
-                            ret_data.date = s.substring(s.search(':')+1).trim()
-                        }
-                        else if (s.search('Report Dt') != -1){
-                            ret_data.r_date = s.substring(s.search(':')+1).trim()
-                        }else if (s.search('Name :') != -1){
-                            ret_data.name = s.substring(s.search(':')+10, s.indexOf("(")).trim()
-                            ret_data.age = s.substring(s.indexOf('(')+1, s.indexOf(')')).trim()
-                        }else if(s.search("Sample collected and sent") != -1){
-                            ret_data.title = data[i+2].replace(/\s{2,}/g, ' ').trim()
-                            start_index = i+3
-                            // console.log("SPACE:", data[i+1], data[i+1].length)
-                        }
-    
-                        if (start_index != -1 && i > start_index+1 && end_index == -1){
-                            if (d.length == 0) is_space = true;
-                            else is_space = false;
-    
-                            if (is_space) space_count += 1
-    
-                            if (space_count >= 4) end_index = i
-                        }
-                        
-                    }
-                }
-            }
-            var x = data.slice(start_index, end_index)
-            var last_space = -1
-            for (var i=0; i<x.length; i++){
-                if (x[i].length == 0){
-                    if (last_space != -1 && last_space != i-1){
-                        ret_data.report.push(x.slice(last_space+1, i))
-                    }last_space = i
-                }
-            }
-            // console.log(x)
-            // fs.writeFileSync(__dirname + '/input.txt', str);
-            console.log(ret_data);
-            data = await getHtml(ret_data);
-            // console.log(data);
-            // console.log("DATA:", data)
-            fs.writeFileSync(__dirname + '/output_pdf.html', data);
-            var fileData = fs.readFileSync(__dirname + '/output_pdf.html', 'utf8');
-            // console.log(fileData);
-            var options = { format: 'A4', path: __dirname + "/output_pdf.pdf", margin: {bottom: "20px", top: "40px", left: 0, right: 0}};
-            let file_data = { content: data };
-        //     console.log(resume);
-            html_to_pdf.generatePdf(file_data, options).then(pdfBuffer => {
-                console.log('success');
-                // res.send({'success': 'PDF Conversion successfull!'});
-                res.setHeader('Content-disposition', 'attachment; filename=output.pdf');
-                res.setHeader('Content-type', 'application/pdf');
-                res.download(`${__dirname}/output_pdf.pdf`, 'output.pdf');
-            });
-        })
+
+        pdfParser.on("pdfParser_dataError", (errData) => console.error(errData.parserError) );
+        pdfParser.on("pdfParser_dataReady", (pdfData) => {
+            // fs.writeFile(path.join(__dirname, 'output.json'), JSON.stringify(pdfData));
+            fs.writeFile(path.join(__dirname, 'output.txt'), pdfParser.getRawTextContent(), ()=>{console.log("Done.");});
+            var data_text = pdfParser.getRawTextContent();
+            var str = "";
+            // console.log(data_text)
+            var data = data_text.split('\n')
+            console.log(data)
+        //     space_count = 0
+        //     is_space = false
+        //     for (var i=0; i<data.length; i++){
+        //         d = data[i]
+        //         s = d.replace(/\s{2,}/g, ' ').trim().replace('GLUCOSE', 'BLOOD SUGAR')
+        //         data[i] = s
+        //         raw_data.push(s)
+        //         str += s + "\n"
+        //         if (s.search('Sample Dt') != -1){
+        //             ret_data.date = s.substring(s.search(':')+1).trim()
+        //         }
+        //         else if (s.search('Report Dt') != -1){
+        //             ret_data.r_date = s.substring(s.search(':')+1).trim()
+        //         }else if (s.search('Name :') != -1){
+        //             ret_data.name = s.substring(s.search(':')+10, s.indexOf("(")).trim()
+        //             ret_data.age = s.substring(s.indexOf('(')+1, s.indexOf(')')).trim()
+        //         }else if(s.search("Sample collected and sent") != -1){
+        //             ret_data.title = data[i+2].replace(/\s{2,}/g, ' ').trim()
+        //             start_index = i+3
+        //             // console.log("SPACE:", data[i+1], data[i+1].length)
+        //         }
+
+        //         if (start_index != -1 && i > start_index+1 && end_index == -1){
+        //             if (d.length == 0) is_space = true;
+        //             else is_space = false;
+
+        //             if (is_space) space_count += 1
+
+        //             if (space_count >= 4) end_index = i
+        //         }
+                
+        //     }
+        //     var x = data.slice(start_index, end_index)
+        //     var last_space = -1
+        //     for (var i=0; i<x.length; i++){
+        //         if (x[i].length == 0){
+        //             if (last_space != -1 && last_space != i-1){
+        //                 ret_data.report.push(x.slice(last_space+1, i))
+        //             }last_space = i
+        //         }
+        //     }
+        //     // console.log(x)
+        //     // fs.writeFileSync(__dirname + '/input.txt', str);
+        //     console.log(ret_data);
+        //     data = getHtml(ret_data);
+        //     // console.log(data);
+        //     // console.log("DATA:", data)
+        //     fs.writeFileSync(__dirname + '/output_pdf.html', data);
+        //     var fileData = fs.readFileSync(__dirname + '/output_pdf.html', 'utf8');
+        //     // console.log(fileData);
+        //     var options = { format: 'A4', path: __dirname + "/output_pdf.pdf", margin: {bottom: "20px", top: "40px", left: 0, right: 0}};
+        //     let file_data = { content: data };
+        // //     console.log(resume);
+        //     html_to_pdf.generatePdf(file_data, options).then(pdfBuffer => {
+        //         console.log('success');
+        //         // res.send({'success': 'PDF Conversion successfull!'});
+        //         res.setHeader('Content-disposition', 'attachment; filename=output.pdf');
+        //         res.setHeader('Content-type', 'application/pdf');
+        //         res.download(`${__dirname}/output_pdf.pdf`, 'output.pdf');
+        //     }); 
+        });
+
+        pdfParser.loadPDF(path.join(__dirname, file.path));
     }catch (error) {
         console.log(error);
         res.send({'error': error});
