@@ -1,12 +1,13 @@
 const express     = require('express');
 const bodyParser  = require('body-parser');
 const path = require('path')
+const pdf = require('pdf-parse');
+
 const fs = require('fs');
 const multer  = require('multer');
 const html_to_pdf = require('html-pdf-node');
 
 const upload = multer({dest: 'download/'});
-const PDFParser = require("pdf2json");
 
 const app = express();
 
@@ -19,25 +20,86 @@ app.route('/').get(function (req, res) {
     res.sendFile(__dirname + "/index.html");
 });
 // console.log(path.join(__dirname, '/AlumniSans-Regular.ttf'))
-async function getHtml(data){
+function getHtml(data, plain=false){
+    console.log(data)
     // fontPath = fs.readFileSync(path.join(__dirname, '/AlumniSans-Regular.ttf'));
     // const alumiFont = fontPath.toString('base64');
-    var html_start = `<html lang=""> <head> <meta charset="utf-8"> <title>JoyLab</title><style>*{padding:0;margin:0;font-family:Impact}.container{display:flex;justify-content:center;align-items:center;flex-direction:column;margin:5% 10%}.header{display:flex;flex-direction:column;justify-content:center;align-items:center}.header h1{margin:15px;color:red;font-size:220%}.header p{margin:4px;font-weight:600;color:rgba(0,0,0,0.85)}hr{width:100%;margin:10px;background-color:#000;height:1px}#info{font-weight:700}#info p{margin:3px;color:rgba(0,0,0,0.85)}.row{width:97%;display:flex;flex-direction:row;justify-content:space-between}.column{display:flex;flex-direction:column}.column-left{display:flex;flex-direction:column;align-items:flex-start;align-content:flex-start}.column-right{display:flex;flex-direction:column;align-items:flex-end;align-content:flex-end}.footer{display:flex;flex-direction:column;justify-content:center;align-items:center}.footer span{font-weight:600;margin:-3px}.footer p{font-size:110%;font-weight:600;margin:2px}.footer h2{margin:5px}#report{width:100%;display:flex;flex-direction:column;justify-content:center;margin:5px}#report h3{text-align:center;text-decoration:underline}.row-full td{font-size:100%;font-weight:500}.row-full th{text-decoration:underline;font-size:120%}.row-full td,.row-full th{text-align:end;padding:2px}.row-full tr{vertical-align:baseline}</style></head> <body> <div class="container"> <div class="header"> <h1>JOY CLINICAL LABORATORY</h1> <p>No: 8, Kalaivani Street, Srinivasanagar,</p> <p>New Perungalathur, Chennai-63</p> </div> <hr> <div id="info" class="row"> <div class="column-left"> <p>Patient Name : ${data.name}</p> <p>Age/Gender : ${data.age}</p> <p>Referred by Doctor: Self</p> </div> <div class="column-right"> <p>Date:${data.date}</p> <p>Collection Date:${data.date}</p> <p>Received date :${data.date}</p> <p>Report date :${data.r_date}</p> </div> </div> <hr> <div id="report"> <h3>${data.title}</h3> <table class="row-full"> <thead> <tr> <th style="text-align: start;">TEST</th> <th>RESULT</th> <th>UNITS</th> <th>REFERENCE RANGE</th> </tr> </thead> <tbody>`;
+    var margin = -3
+    var html_start = `<html lang=""> <head> <meta charset="utf-8"> <title>JoyLab</title><style>*{padding:0;margin:0;font-family:Impact}body{display:flex;align-items:center;flex-direction:column;height:100vh;justify-content:space-around}.container{width:70%;display:flex;align-items:center;flex-direction:column;}.header{display:flex;flex-direction:column;justify-content:center;align-items:center}.header h1{margin:15px;color:red;font-size:220%}.header p{margin:4px;font-weight:600;color:rgba(0,0,0,0.85)}hr{width:100%;margin:10px;background-color:#000;height:1px}#info{font-weight:700}#info p{margin:5px;color:rgba(0,0,0,0.85)}.row{width:97%;display:flex;flex-direction:row;justify-content:space-between}.column{display:flex;flex-direction:column}.column-left{display:flex;flex-direction:column;align-items:flex-start;align-content:flex-start}.column-right{display:flex;flex-direction:column;align-items:flex-end;align-content:flex-end}.footer{width:70%;display:flex;flex-direction:column;justify-content:center;align-items:center}.footer span{font-weight:500;margin:${margin}px}.footer p{font-size:110%;font-weight:500;margin:2px}.footer h2{margin:5px}#report{width:100%;display:flex;flex-direction:column;justify-content:center;margin:5px}#report h3{text-align:center;text-decoration:underline}.row-full td{font-size:100%;font-weight:500}.row-full th{text-decoration:underline;font-size:120%}.row-full td,.row-full th{text-align:end;padding:5px}.row-full tr{vertical-align:baseline}</style></head> <body> <div class="container"> <div class="header"> <h1>JOY CLINICAL LABORATORY</h1> <p>No: 8, Kalaivani Street, Srinivasanagar,</p> <p>New Perungalathur, Chennai-63</p> </div> <hr> <div id="info" class="row"> <div class="column-left"> <p>Patient Name : ${data.name}</p> <p>Age/Gender : ${data.age}</p> <p>Referred by Doctor: ${data.doctor}</p> </div> <div class="column-right"> <p>Date:${data.date}</p> <p>Collection Date:${data.date}</p> <p>Received date :${data.date}</p> <p>Report date :${data.r_date}</p> </div> </div> <hr>`+ (!plain ? `<div id="report"> <h3>${data.title}</h3><table class="row-full"> <thead> <tr> <th style="text-align: start;">TEST</th> <th>RESULT</th> <th>UNITS</th> <th>REFERENCE RANGE</th> </tr> </thead> <tbody>` : '');
     
-    var html_end = `</tbody> </table> </div> <hr> <div class="footer"> <span>ஜாய் இரத்த பரி சோதனை நிலையம்,.</span> <span>நெ.8. கலைவாணி தெரு,சீனி வாசநகர் ,புதுப</span> <span>பெருங்களத்தூர்,சென்னை-63</span> <p>Cello: 9940240874 /6374 609868</p> <h3>House Collection Available</h3> </div> </div> </body></html>`;
+    var html_end = (!plain ? `</tbody> </table></div> ` : '') + `</div> <div class="footer"> <div style="margin:15px; margin-top:30px; width: 100%;"> <h3 style="text-align:end; margin-right: 5%; text-decoration: none;">Lab Technician</h3> </div> <hr> <span>ஜாய் இரத்த பரி சோதனை நிலையம்,</span> <span>நெ.8. கலைவாணி தெரு,சீனி வாசநகர் ,புதுப்</span> <span>பெருங்களத்தூர்,சென்னை-63</span> <p>Cello: 9940240874 /6374 609868</p> <h3>House Collection Available</h3> </div> </body></html>`;
     var mid_html = ""
     // console.log(data.report)
     for (var r of data.report){
         // console.log(r)
-        var d = r[0].split(":");
         // console.log(d)
-        var vals = d[1].match(/\d[0-9- ]+\s[a-z/]+/g)
-        mid_html += `<tr> <td style="text-align: start;">${d[0].substring(0, d[0].indexOf('(')).trim()}<br>${d[0].substring(d[0].indexOf('(')).replace('*', '').trim()} </td> <td>: ${vals[0].split(' ')[0]}</td> <td>: ${vals[0].split(' ')[1]}</td> <td>: (${vals[1]})</td> </tr>`
+        var nl = r[0].match(/(?<=\().*(?=\))/)
+        var name = nl ? r[0].substring(0,r[0].indexOf(nl[0])-1).trim() : r[0]
+        console.log(name, nl)
+        mid_html += `<tr> <td style="text-align: start;">${name}` + (nl ? `<br>${'('+nl[0].trim()+')'}` : '') + `</td> <td>: ${r[1].split(' ')[0]}</td> <td>: ${r[1].split(' ')[1]}</td> <td>: (${r[2]})</td> </tr>`
     }
     return html_start + mid_html + html_end;
 }
 
-let pdfParser = new PDFParser(this,1);
+function checking(){
+    let dataBuffer = fs.readFileSync(path.join(__dirname, 'input.pdf'));
+
+    pdf(dataBuffer).then(function(data_text) {
+        fs.writeFileSync(__dirname + '/output.txt', data_text.text);
+        var text = data_text.text.split('\n')
+        console.log(text);
+        var str = ""
+        var start = data_text.text.match()
+        var x = data_text.text
+        var ret_data = {
+            date: text[6],
+            r_date: text[9].match(/\d[0-9/]+/)[0],
+            name: text[12].match(/^\w[a-zA-Z. ]+/)[0].trim(),
+            age: text[12].match(/\(.*\)/)[0].replace(/\((.*)\)/, '$1'),
+            title: "",
+            report: [],
+            doctor: x.indexOf('Doctor') != -1 ? x.match(/(?<=\nDoctor\n).*(?=\n)/)[0].replace(',','') : 'Self' 
+        }
+
+        var y = x.match(/(?<=\n:\n(:\n){1,3})[^:](\s|.)*(?=\* End.*)/)[0]
+
+        ret_data.title = y.split('\n')[0]
+        var reports = y.match(/\n.+\n.+\n:\n.+/g)
+
+        for (var r of reports){
+            r = r.substring(1).split('\n')
+            ret_data.report.push([
+                r[0].match(/.*\D(?=\d+\smg)/)[0],
+                r[0].match(/\d+\smg.*/)[0],
+                r[1],
+                r.slice(2).join('\n').match(/[^:\n].*/)[0]
+            ])
+        }
+
+        // console.log(x)
+        // fs.writeFileSync(__dirname + '/input.txt', str);
+        console.log(ret_data);
+        var data = getHtml(ret_data);
+        // console.log(data);
+        // console.log("DATA:", data)
+        fs.writeFileSync(__dirname + '/output_pdf.html', data);
+        var fileData = fs.readFileSync(__dirname + '/output_pdf.html', 'utf8');
+        // console.log(fileData);
+        var options = { format: 'A4', path: __dirname + "/output_pdf.pdf", margin: {bottom: "20px", top: "40px", left: 0, right: 0}};
+        let file_data = { content: data };
+    //     console.log(resume);
+        html_to_pdf.generatePdf(file_data, options).then(pdfBuffer => {
+            console.log('success');
+            // res.send({'success': 'PDF Conversion successfull!'});
+            // res.setHeader('Content-disposition', 'attachment; filename=output.pdf');
+            // res.setHeader('Content-type', 'application/pdf');
+            // res.download(`${__dirname}/output_pdf.pdf`, 'output.pdf');
+        }); 
+    });
+}
+
+// checking()
+
 app.post('/convert', upload.single('pdf'), async (req,res)=>{
 
     fs.readdir(path.join(__dirname, 'download'), async (err, files) => {
@@ -53,90 +115,80 @@ app.post('/convert', upload.single('pdf'), async (req,res)=>{
     var file = req.file;
     console.log("Building PDF..");
     try{
+        let dataBuffer = fs.readFileSync(path.join(__dirname, file.path));
+
+    pdf(dataBuffer).then(function(data_text) {
+        fs.writeFileSync(__dirname + '/output.txt', data_text.text);
+        var text = data_text.text.split('\n')
+        var x = data_text.text
+        console.log(text);
+        var str = ""
+        var start = data_text.text.match()
         var ret_data = {
-            date: "",
-            r_date: "",
-            name: "",
-            age: "",
+            date: text[6],
+            r_date: text[9].match(/\d[0-9/]+/)[0],
+            name: text[12].match(/^\w[a-zA-Z. ]+/)[0].trim(),
+            age: text[12].match(/\(.*\)/)[0].replace(/\((.*)\)/, '$1'),
             title: "",
-            report: []
+            report: [],
+            doctor: x.indexOf('Doctor') != -1 ? x.match(/(?<=\nDoctor\n).*(?=\n)/)[0].replace(',','') : 'Self' 
         }
-        var start_index = -1;
-        var end_index = -1;
-        var raw_data = []
 
-        pdfParser.on("pdfParser_dataError", (errData) => console.error(errData.parserError) );
-        pdfParser.on("pdfParser_dataReady", (pdfData) => {
-            // fs.writeFile(path.join(__dirname, 'output.json'), JSON.stringify(pdfData));
-            fs.writeFile(path.join(__dirname, 'output.txt'), pdfParser.getRawTextContent(), ()=>{console.log("Done.");});
-            var data_text = pdfParser.getRawTextContent();
-            var str = "";
-            // console.log(data_text)
-            var data = data_text.split('\n')
-            console.log(data)
-        //     space_count = 0
-        //     is_space = false
-        //     for (var i=0; i<data.length; i++){
-        //         d = data[i]
-        //         s = d.replace(/\s{2,}/g, ' ').trim().replace('GLUCOSE', 'BLOOD SUGAR')
-        //         data[i] = s
-        //         raw_data.push(s)
-        //         str += s + "\n"
-        //         if (s.search('Sample Dt') != -1){
-        //             ret_data.date = s.substring(s.search(':')+1).trim()
-        //         }
-        //         else if (s.search('Report Dt') != -1){
-        //             ret_data.r_date = s.substring(s.search(':')+1).trim()
-        //         }else if (s.search('Name :') != -1){
-        //             ret_data.name = s.substring(s.search(':')+10, s.indexOf("(")).trim()
-        //             ret_data.age = s.substring(s.indexOf('(')+1, s.indexOf(')')).trim()
-        //         }else if(s.search("Sample collected and sent") != -1){
-        //             ret_data.title = data[i+2].replace(/\s{2,}/g, ' ').trim()
-        //             start_index = i+3
-        //             // console.log("SPACE:", data[i+1], data[i+1].length)
-        //         }
+        var y = x.match(/(?<=\n:\n(:\n){1,3})[^:](\s|.)*(?=\* End.*)/)[0]
 
-        //         if (start_index != -1 && i > start_index+1 && end_index == -1){
-        //             if (d.length == 0) is_space = true;
-        //             else is_space = false;
+        ret_data.title = y.split('\n')[0]
+        var reports = y.match(/\n.+\n.+\n:\n.+/g)
+        console.log(reports)
+        try{
 
-        //             if (is_space) space_count += 1
+            for (var r of reports){
+                r = r.substring(1).split('\n')
+                ret_data.report.push([
+                    r[0].match(/.*\D(?=\d+\smg)/)[0],
+                    r[0].match(/\d+\smg.*/)[0],
+                    r[1],
+                    r.slice(2).join('\n').match(/[^:\n].*/)[0]
+                ])
+            }
+        }catch{
+            ret_data.report = [];
+            var data = getHtml(ret_data,true);
+            // console.log(data);
+            // console.log("DATA:", data)
+            fs.writeFileSync(__dirname + '/output_pdf.html', data);
+            var fileData = fs.readFileSync(__dirname + '/output_pdf.html', 'utf8');
+            // console.log(fileData);
+            var options = { format: 'A4', path: __dirname + "/output_pdf.pdf", margin: {bottom: "20px", top: "40px", left: 0, right: 0}};
+            let file_data = { content: data };
+        //     console.log(resume);
+            html_to_pdf.generatePdf(file_data, options).then(pdfBuffer => {
+                console.log('success');
+                res.setHeader('Content-disposition', 'attachment; filename=output.pdf');
+                res.setHeader('Content-type', 'application/pdf');
+                res.download(`${__dirname}/output_pdf.pdf`, 'output.pdf');
+            });
+            return
+        }
 
-        //             if (space_count >= 4) end_index = i
-        //         }
-                
-        //     }
-        //     var x = data.slice(start_index, end_index)
-        //     var last_space = -1
-        //     for (var i=0; i<x.length; i++){
-        //         if (x[i].length == 0){
-        //             if (last_space != -1 && last_space != i-1){
-        //                 ret_data.report.push(x.slice(last_space+1, i))
-        //             }last_space = i
-        //         }
-        //     }
-        //     // console.log(x)
-        //     // fs.writeFileSync(__dirname + '/input.txt', str);
-        //     console.log(ret_data);
-        //     data = getHtml(ret_data);
-        //     // console.log(data);
-        //     // console.log("DATA:", data)
-        //     fs.writeFileSync(__dirname + '/output_pdf.html', data);
-        //     var fileData = fs.readFileSync(__dirname + '/output_pdf.html', 'utf8');
-        //     // console.log(fileData);
-        //     var options = { format: 'A4', path: __dirname + "/output_pdf.pdf", margin: {bottom: "20px", top: "40px", left: 0, right: 0}};
-        //     let file_data = { content: data };
-        // //     console.log(resume);
-        //     html_to_pdf.generatePdf(file_data, options).then(pdfBuffer => {
-        //         console.log('success');
-        //         // res.send({'success': 'PDF Conversion successfull!'});
-        //         res.setHeader('Content-disposition', 'attachment; filename=output.pdf');
-        //         res.setHeader('Content-type', 'application/pdf');
-        //         res.download(`${__dirname}/output_pdf.pdf`, 'output.pdf');
-        //     }); 
-        });
-
-        pdfParser.loadPDF(path.join(__dirname, file.path));
+        // console.log(x)
+        // fs.writeFileSync(__dirname + '/input.txt', str);
+        console.log(ret_data);
+        var data = getHtml(ret_data);
+        // console.log(data);
+        // console.log("DATA:", data)
+        fs.writeFileSync(__dirname + '/output_pdf.html', data);
+        var fileData = fs.readFileSync(__dirname + '/output_pdf.html', 'utf8');
+        // console.log(fileData);
+        var options = { format: 'A4', path: __dirname + "/output_pdf.pdf", margin: {bottom: "20px", top: "40px", left: 0, right: 0}};
+        let file_data = { content: data };
+    //     console.log(resume);
+        html_to_pdf.generatePdf(file_data, options).then(pdfBuffer => {
+            console.log('success');
+            res.setHeader('Content-disposition', 'attachment; filename=output.pdf');
+            res.setHeader('Content-type', 'application/pdf');
+            res.download(`${__dirname}/output_pdf.pdf`, 'output.pdf');
+        }); 
+    });
     }catch (error) {
         console.log(error);
         res.send({'error': error});

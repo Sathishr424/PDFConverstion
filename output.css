@@ -4,12 +4,20 @@
     font-family: Impact;
 }
 
-.container{
+body{
     display: flex;
-    justify-content: center;
     align-items: center;
     flex-direction: column;
-    margin: 5% 15%;
+    height: 100vh;
+    justify-content: space-around;
+}
+
+.container{
+    width: 70%;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    margin: 0 15%;
 }
 
 .header{
@@ -43,7 +51,7 @@ hr{
 }
 
 #info p{
-    margin: 3px;
+    margin: 5px;
     color: rgba(0, 0, 0, 0.85);
 }
 
@@ -75,6 +83,7 @@ hr{
 }
 
 .footer{
+    width: 70%;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -82,13 +91,13 @@ hr{
 }
 
 .footer span{
-    font-weight: 600;
+    font-weight: 500;
     margin: -3px;
 }
 
 .footer p{
     font-size: 110%;
-    font-weight: 600;
+    font-weight: 500;
     margin: 2px;
 }
 
@@ -124,7 +133,7 @@ hr{
 
 .row-full td, .row-full th{
     text-align: end;
-    padding: 2px;
+    padding: 5px;
 
 }
 
